@@ -14,6 +14,7 @@ import torch
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import argparse
 from pathlib import Path
 
 from esa_solver_complete import ESASolver
@@ -51,7 +52,7 @@ def setup_esa_experiment(
         
         # Data paths
         'test_csv_path': os.path.join(data_dir, 'preprocessed', 'multivariate', 
-                                      'ESA-Mission1-semi-supervised', f'{dataset_name}.train.csv'),
+                                      'ESA-Mission1-semi-supervised', f'{dataset_name}.test.csv'),
         'labels_csv_path': os.path.join(data_dir, 'ESA-Mission1', 'labels.csv'),
         
         # Optional: if you have training data
@@ -281,7 +282,7 @@ def interpret_esa_metrics():
 if __name__ == "__main__":
     
     # Print interpretation guide
-    interpret_esa_metrics()
+    #interpret_esa_metrics()
     
     # Set your data directory
     DATA_DIR = "data"
@@ -290,9 +291,17 @@ if __name__ == "__main__":
     print("\n\nEXAMPLE 1: Single Experiment")
     print("="*80)
     
+    parser = argparse.ArgumentParser()
+
+    dataset_name="3_months"
+
+    parser.add_argument('--dataset', type=str, default=f'{dataset_name}')
+
+    args = parser.parse_args()
+
     config = setup_esa_experiment(
         data_dir=DATA_DIR,
-        dataset_name="3_months",
+        dataset_name=args.dataset,
         target_channels=[
             "channel_41", "channel_42", "channel_43",
             "channel_44", "channel_45", "channel_46"

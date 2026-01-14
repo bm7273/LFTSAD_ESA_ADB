@@ -26,9 +26,9 @@ esa_data_loader.py loads data for the ESA experiments.
 ## Usage
 1. Install Python 3.6, PyTorch >= 1.4.0
 2. Download the datasets
-3. To train and evaluate LFTSAD on a dataset, run the following command:
+3. To train and evaluate LFTSAD on a dataset, for example on 3 month data, run the following command:
 ```bash
-python esa_main.py 
+python esa_main.py --dataset 3_months
 ```
 
 ## BibTex Citation
