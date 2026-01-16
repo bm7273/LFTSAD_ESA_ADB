@@ -268,14 +268,18 @@ class ESASolver:
         print('any prediction shape:', pred_any.shape)
         # ESA Metrics
         if self.use_esa_metrics:
-            self._compute_esa_metrics(
+            esa_results, channel_results, adtqc = self._compute_esa_metrics(
                 predictions=pred_binary,
                 ground_truth=ground_truth,
                 anomaly_scores=anomaly_scores
             )
         
-        return accuracy, precision, recall, f_score
-    
+            return accuracy, precision, recall, f_score, esa_results, channel_results, adtqc
+
+        else: 
+
+            return accuracy, precision, recall, f_score
+        
     def _reconstruct_from_windows(self, scores, labels, start_indices):
         """
         scores: (n_windows, win_size, n_channels)
@@ -421,6 +425,7 @@ class ESASolver:
         
         print("="*60 + "\n")
 
+        return esa_results, channel_results, adtqc_results
 
 # Example usage
 if __name__ == "__main__":

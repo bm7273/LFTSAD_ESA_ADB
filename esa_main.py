@@ -133,15 +133,29 @@ def run_experiment(config):
         print("\nNo training data provided, skipping training")
     
     # Test and evaluate
-    accuracy, precision, recall, f_score = solver.test()
-    
-    # Collect results
-    results = {
-        'accuracy': float(accuracy),
-        'precision': float(precision),
-        'recall': float(recall),
-        'f1_score': float(f_score),
-    }
+    if solver.use_esa_metrics:
+
+        accuracy, precision, recall, f_score, esa_results, channel_results, adtqc = solver.test()
+
+        results = {
+            'accuracy': float(accuracy),
+            'precision': float(precision),
+            'recall': float(recall),
+            'f1_score': float(f_score),
+            **esa_results,
+            **channel_results,
+            **adtqc,
+        }
+    else: 
+        
+        accuracy, precision, recall, f_score = solver.test()
+        # Collect results
+        results = {
+            'accuracy': float(accuracy),
+            'precision': float(precision),
+            'recall': float(recall),
+            'f1_score': float(f_score),
+        }
     
     # Save results
     results_path = os.path.join(config['output_dir'], 'results.json')
