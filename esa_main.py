@@ -124,9 +124,9 @@ def run_experiment(config):
     # Train if training data is provided
     if hasattr(solver, 'train_loader'):
         print("\nTraining phase enabled")
-        t_train_start = time.time
+        t_train_start = time.time()
         solver.train()
-        t_train_end = time.time
+        t_train_end = time.time()
         t_train = t_train_end - t_train_start
         # Save model
         model_path = os.path.join(config['output_dir'], 'model.pth')
