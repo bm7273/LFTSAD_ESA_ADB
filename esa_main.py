@@ -141,7 +141,7 @@ def run_experiment(config):
     # Test and evaluate
     if solver.use_esa_metrics:
 
-        accuracy, precision, recall, f_score, esa_results, channel_results, adtqc, t_test = solver.test()
+        accuracy, precision, recall, f_score, esa_results, channel_results, adtqc, t_test, pred_binary = solver.test()
         
         if hasattr(solver, 'train_loader'):
 
@@ -171,7 +171,7 @@ def run_experiment(config):
             }
     else: 
 
-        accuracy, precision, recall, f_score, t_test = solver.test()
+        accuracy, precision, recall, f_score, t_test, pred_binary = solver.test()
 
         if hasattr(solver, 'train_loader'):
         # Collect results
@@ -193,6 +193,12 @@ def run_experiment(config):
             }
             
     # Save results
+    pred_df = pd.DataFrame(pred_binary, columns=solver.target_channels)
+    pred_df_path = os.path.join(config['output_dir'], 'predictions.csv')
+    pred_df.to_csv(pred_df_path, index=False)
+    
+    print(f"Predictions saved to: {pred_df_path}")
+    
     results_path = os.path.join(config['output_dir'], 'results.json')
     with open(results_path, 'w') as f:
         json.dump(results, f, indent=2)

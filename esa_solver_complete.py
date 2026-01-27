@@ -276,7 +276,7 @@ class ESASolver:
                 anomaly_scores=anomaly_scores
             )
         
-            return accuracy, precision, recall, f_score, esa_results, channel_results, adtqc, t_test
+            return accuracy, precision, recall, f_score, esa_results, channel_results, adtqc, t_test, pred_binary
 
         else: 
 
