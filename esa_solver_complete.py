@@ -394,14 +394,12 @@ class ESASolver:
             # Use first channel for basic ESA scores
             esa_metric = ESAScores(
                 betas=self.beta,
-                full_range=full_range,
-                select_labels={"Category": ["Anomaly"]}
+                full_range=full_range
             )
-            
+            print("Telemetry range:", full_range[0], "to", full_range[1])
+            print("Labels range:", y_true_df["StartTime"].min(), "to", y_true_df["EndTime"].max())
             # Convert single channel for ESAScores
-            # y_pred_first = y_pred_dict[self.channel_names[0]]
-            # esa_results = esa_metric.score(y_true_df, y_pred_first)
-
+            #y_pred_first = y_pred_dict[self.channel_names[0]]
             esa_results = esa_metric.score(y_true_df, y_any_pred)
             
             for metric_name, value in esa_results.items():
