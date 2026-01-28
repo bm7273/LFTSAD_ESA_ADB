@@ -185,76 +185,107 @@ class ESASolver:
         print("Training completed!\n")
     
     def test(self):
+        """Memory-optimized testing"""
         t_test_start = time.time()
-        """Test the model and compute metrics"""
+        
         print("\n" + "="*60)
-        print("Starting Testing and Evaluation")
+        print("Starting Testing and Evaluation (Memory Optimized)")
         print("="*60)
         
         self.model.eval()
         
-        # Collect all predictions and scores
-        all_scores = []
-        all_labels = []
-        all_start_indices = []
+        n_samples = len(self.test_dataset.data)
+        n_channels = self.n_channels
         
+        print(f"Total samples: {n_samples:,}, Channels: {n_channels}")
+        print(f"Estimated memory for scores: {n_samples * n_channels * 4 / 1e9:.2f} GB")
+        
+        # =========================================================
+        # OPTIMIZATION 1: Pre-allocate arrays instead of appending
+        # =========================================================
+        score_sum = np.zeros((n_samples, n_channels), dtype=np.float32)
+        score_count = np.zeros(n_samples, dtype=np.float32)
+        ground_truth = np.zeros((n_samples, n_channels), dtype=np.float32)
+        
+        # =========================================================
+        # OPTIMIZATION 2: Process directly into pre-allocated arrays
+        # =========================================================
         with torch.no_grad():
-            for i, (input_data, labels, start_indices) in enumerate(self.test_loader):
+            for i, (input_data, labels, start_indices) in enumerate(tqdm(
+                self.test_loader, desc="Testing", leave=True
+            )):
                 input = input_data.float().to(self.device)
                 
                 # Forward pass
                 series, prior, series_seq, prior_seq = self.model(input)
                 
                 # Compute anomaly scores
-                loss = 0
+                loss = torch.zeros_like(series[0])
                 for u in range(len(prior)):
                     loss += (
                         getattr(self, 'p_seq', 0.5) * self.criterion_keep(series_seq[u], prior_seq[u]) +
                         (1 - getattr(self, 'p_seq', 0.5)) * self.criterion_keep(series[u], prior[u])
                     )
                 
-                # Aggregate scores
-                #print('loss shape', loss.shape)
+                # Convert to numpy ONCE and immediately process
                 scores = loss.detach().cpu().numpy()  # (B, W, C)
-                all_scores.append(scores)
+                labels_np = labels.numpy()  # (B, W, C)
+                start_idx_np = start_indices.numpy()
                 
+                # =========================================================
+                # OPTIMIZATION 3: Accumulate directly, no intermediate storage
+                # =========================================================
+                batch_size = scores.shape[0]
+                for b in range(batch_size):
+                    start_idx = start_idx_np[b]
+                    end_idx = min(start_idx + self.win_size, n_samples)
+                    window_len = end_idx - start_idx
+                    
+                    score_sum[start_idx:end_idx] += scores[b, :window_len, :]
+                    score_count[start_idx:end_idx] += 1
+                    np.maximum(
+                        ground_truth[start_idx:end_idx],
+                        labels_np[b, :window_len, :],
+                        out=ground_truth[start_idx:end_idx]
+                    )
                 
-                all_labels.append(labels.cpu().numpy())
-                all_start_indices.extend(start_indices.numpy())
+                # =========================================================
+                # OPTIMIZATION 4: Explicitly delete tensors and clear cache
+                # =========================================================
+                del input, series, prior, series_seq, prior_seq, loss, scores, labels_np
                 
-                if (i + 1) % 100 == 0:
-                    print(f"Processed {i+1}/{len(self.test_loader)} batches")
+                # Clear GPU cache periodically
+                if (i + 1) % 50 == 0 and torch.cuda.is_available():
+                    torch.cuda.empty_cache()
         
-        # Combine all batches
-        all_scores = np.concatenate(all_scores, axis=0)  # (n_windows, win_size)
-        all_labels = np.concatenate(all_labels, axis=0)  # (n_windows, win_size, n_channels)
+        # =========================================================
+        # OPTIMIZATION 5: In-place division
+        # =========================================================
+        score_count[score_count == 0] = 1
+        anomaly_scores = score_sum  # Reuse the array
+        anomaly_scores /= score_count[:, None]  # In-place division
+        del score_sum, score_count  # Free memory
+        gc.collect()
         
-        print(f"\nCollected scores shape: {all_scores.shape}")
-        print(f"Collected labels shape: {all_labels.shape}")
+        print(f"\nReconstructed ground truth shape: {ground_truth.shape}")
+        print(f"Anomaly scores shape: {anomaly_scores.shape}")
         
-        # Reconstruct full time series from windows
-        ground_truth, anomaly_scores = self._reconstruct_from_windows(all_scores, all_labels, all_start_indices)
+        # Compute threshold and predictions
+        thresh = np.percentile(anomaly_scores, 100 - self.anormly_ratio, axis=0)
+        pred_binary = (anomaly_scores > thresh[None, :]).astype(np.int8)  # Use int8 instead of int64!
         
+        print(f"Thresholds: {np.array2string(thresh, formatter={'float_kind': lambda x: f'{x:.6f}'})}")
         
-        print(f"Reconstructed ground truth shape: {ground_truth.shape}")
-        
-        
-        # Compute threshold
-        thresh = np.percentile(anomaly_scores, 100 - self.anormly_ratio, axis=0)  # (C,)
-        pred_binary = (anomaly_scores > thresh[None, :]).astype(int)              # (T, C)
-        thresh_str = np.array2string(thresh, formatter={'float_kind': lambda x: f"{x:.6f}"})
-        print(f"Thresholds (at {getattr(self, 'anormly_ratio', 1.0)}% anomaly ratio): {thresh_str}")
         t_test_end = time.time()
-        t_test =  t_test_end - t_test_start
+        t_test = t_test_end - t_test_start
         
-        # Standard binary classification metrics (aggregated across channels)
+        # Standard metrics
         print("\n" + "="*60)
         print("STANDARD METRICS (Channel-Aggregated)")
         print("="*60)
         
-        # Use any-channel anomaly for overall metrics
-        gt_any = ground_truth.any(axis=1).astype(int)
-        pred_any = pred_binary.any(axis=1).astype(int)
+        gt_any = ground_truth.any(axis=1).astype(np.int8)
+        pred_any = pred_binary.any(axis=1).astype(np.int8)
         
         accuracy = accuracy_score(gt_any, pred_any)
         precision, recall, f_score, _ = precision_recall_fscore_support(
@@ -266,20 +297,15 @@ class ESASolver:
         print(f"Recall:    {recall:.4f}")
         print(f"F1-Score:  {f_score:.4f}")
         
-        print('binary prediction shape:', pred_binary.shape)
-        print('any prediction shape:', pred_any.shape)
-        # ESA Metrics
+        # ESA Metrics with memory optimization
         if self.use_esa_metrics:
-            esa_results, channel_results, adtqc = self._compute_esa_metrics(
+            esa_results, channel_results, adtqc = self._compute_esa_metrics_optimized(
                 predictions=pred_binary,
                 ground_truth=ground_truth,
                 anomaly_scores=anomaly_scores
             )
-        
             return accuracy, precision, recall, f_score, esa_results, channel_results, adtqc, t_test
-
-        else: 
-
+        else:
             return accuracy, precision, recall, f_score, t_test
         
     def _reconstruct_from_windows(self, scores, labels, start_indices):
