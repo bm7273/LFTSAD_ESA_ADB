@@ -84,7 +84,7 @@ def setup_esa_experiment(
         'beta': 0.5,  # Beta for F-beta score (0.5 favors precision)
         
         # Output
-        'output_dir': f'results/{experiment_name}',
+        'output_dir': f'/content/drive/MyDrive/LFTSAD_ESA_ADB/results/{experiment_name}',
     }
     
     # Create output directory
