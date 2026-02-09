@@ -68,8 +68,8 @@ class ESADataset(Dataset):
             validation_date_split = self.timestamps.max() - pd.DateOffset(months=3)
             self.validation_date_split = validation_date_split
 
-            train_df = df[df["timestamp"] <= validation_date_split]
-            val_df   = df[df["timestamp"] >  validation_date_split]
+            train_df = df[self.timestamps <= validation_date_split]
+            val_df   = df[self.timestamps >  validation_date_split]
 
             train_data = train_df[self.target_channels].values.astype(np.float32)
 
