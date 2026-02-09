@@ -354,15 +354,24 @@ if __name__ == "__main__":
     parser.add_argument('--dataset', type=str, default=f'{dataset_name}')
     parser.add_argument('--mission', type=str, default=1)
 
+
     args = parser.parse_args()
+
+    if args.mission == 1: 
+
+        targets = [
+            "channel_41", "channel_42", "channel_43",
+            "channel_44", "channel_45", "channel_46"
+        ]
+
+    else:
+
+        targets = None
 
     config = setup_esa_experiment(
         data_dir=DATA_DIR,
         dataset_name=args.dataset,
-        target_channels=[
-            "channel_41", "channel_42", "channel_43",
-            "channel_44", "channel_45", "channel_46"
-        ],
+        target_channels=targets,
         experiment_name=f"lftsad_{args.dataset}_6ch",
         mission = f"Mission{args.mission}"
     )
