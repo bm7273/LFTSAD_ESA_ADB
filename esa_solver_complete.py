@@ -233,9 +233,6 @@ class ESASolver:
                 labels_np = labels.numpy()  # (B, W, C)
                 start_idx_np = start_indices.numpy()
                 
-                # =========================================================
-                # OPTIMIZATION 3: Accumulate directly, no intermediate storage
-                # =========================================================
                 batch_size = scores.shape[0]
                 for b in range(batch_size):
                     start_idx = start_idx_np[b]
@@ -250,9 +247,6 @@ class ESASolver:
                         out=ground_truth[start_idx:end_idx]
                     )
                 
-                # =========================================================
-                # OPTIMIZATION 4: Explicitly delete tensors and clear cache
-                # =========================================================
                 del input, series, prior, series_seq, prior_seq, loss, scores, labels_np
                 
                 # Clear GPU cache periodically

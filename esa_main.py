@@ -74,7 +74,7 @@ def setup_esa_experiment(
         # Training (if applicable)
         'num_epochs': 10,
         'lr': 1e-4,
-        'p_seq': 0.5,
+        'p_seq': 0.5, #alpha
         'sw_max_mean': 0,
         'sw_loss': 0,
         

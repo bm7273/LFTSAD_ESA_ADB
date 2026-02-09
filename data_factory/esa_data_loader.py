@@ -61,7 +61,34 @@ class ESADataset(Dataset):
         print(f"Using channels: {len(self.target_channels)}")
         
         # Extract telemetry data
-        self.data = df[self.target_channels].values.astype(np.float32)
+        
+
+        if self.mode == 'train':
+
+            validation_date_split = df["timestamp"].max() - pd.DateOffset(months=3)
+            self.validation_date_split = validation_date_split
+
+            train_df = df[df["timestamp"] <= validation_date_split]
+            val_df   = df[df["timestamp"] >  validation_date_split]
+
+            train_data = train_df[self.target_channels].values.astype(np.float32)
+
+            self.scaler.fit(train_data)
+
+            train_data = self.scaler.transform(train_data)
+            val_data   = self.scaler.transform(                
+                val_df[self.target_channels].values.astype(np.float32))
+
+            self.train = train_data
+            print("train:", self.train.shape)
+
+            self.val = val_data
+            print("val:", self.val.shape)
+
+        else:
+
+            self.data = df[self.target_channels].values.astype(np.float32)
+
         
         # Extract anomaly labels (per channel)
         self.label_columns = [f'is_anomaly_{ch}' for ch in self.target_channels]
