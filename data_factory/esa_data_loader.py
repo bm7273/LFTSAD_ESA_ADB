@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
+from sklearn.preprocessing import StandardScaler
 
 
 
@@ -39,6 +40,7 @@ class ESADataset(Dataset):
         self.win_size = win_size
         self.step = step
         self.mode = mode
+        self.scaler = StandardScaler()
         
         # Load data
         print(f"Loading ESA data from {csv_path}...")
