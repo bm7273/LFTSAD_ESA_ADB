@@ -65,7 +65,7 @@ class ESADataset(Dataset):
 
         if self.mode == 'train':
 
-            validation_date_split = df["timestamp"].max() - pd.DateOffset(months=3)
+            validation_date_split = self.timestamps.max() - pd.DateOffset(months=3)
             self.validation_date_split = validation_date_split
 
             train_df = df[df["timestamp"] <= validation_date_split]
