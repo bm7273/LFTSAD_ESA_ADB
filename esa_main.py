@@ -24,7 +24,8 @@ def setup_esa_experiment(
     data_dir,
     dataset_name="3_months",
     target_channels=None,
-    experiment_name="lftsad_esa_experiment"
+    experiment_name="lftsad_esa_experiment",
+    mission=1
 ):
     """
     Set up configuration for ESA experiment
@@ -48,16 +49,16 @@ def setup_esa_experiment(
     
     config = {
         # Experiment info
-        'experiment_name': experiment_name,
+        'experiment_name': experiment_name+mission,
         
         # Data paths
         'test_csv_path': os.path.join(data_dir, 'preprocessed', 'multivariate', 
-                                      'ESA-Mission1-semi-supervised', f'{dataset_name}.test.csv'),
-        'labels_csv_path': os.path.join(data_dir, 'ESA-Mission1', 'labels.csv'),
+                                      f'ESA-{mission}-semi-supervised', f'{dataset_name}.test.csv'),
+        'labels_csv_path': os.path.join(data_dir, f'ESA-{mission}', 'labels.csv'),
         
         # Optional: if you have training data
         'train_csv_path': os.path.join(data_dir, 'preprocessed', 'multivariate', 
-                                        'ESA-Mission1-semi-supervised', f'{dataset_name}.train.csv'),
+                                        f'ESA-{mission}-semi-supervised', f'{dataset_name}.train.csv'),
         
         # Channel selection
         'target_channels': target_channels,
@@ -74,17 +75,17 @@ def setup_esa_experiment(
         # Training (if applicable)
         'num_epochs': 10,
         'lr': 1e-4,
-        'p_seq': 0.5,
+        'p_seq': 0.5, #alpha
         'sw_max_mean': 0,
         'sw_loss': 0,
         
         # Evaluation
-        'anormly_ratio': 1.0,  # Percentage of samples to mark as anomalies
+        'anormly_ratio': 0.1,  # Percentage of samples to mark as anomalies
         'use_esa_metrics': True,
         'beta': 0.5,  # Beta for F-beta score (0.5 favors precision)
         
         # Output
-        'output_dir': f'results/{experiment_name}',
+        'output_dir': f'/content/drive/MyDrive/LFTSAD_ESA_ADB/results/{experiment_name+mission}',
     }
     
     # Create output directory
@@ -141,7 +142,7 @@ def run_experiment(config):
     # Test and evaluate
     if solver.use_esa_metrics:
 
-        accuracy, precision, recall, f_score, esa_results, channel_results, adtqc, t_test = solver.test()
+        accuracy, precision, recall, f_score, esa_results, channel_results, adtqc, t_test, pred_binary = solver.test()
         
         if hasattr(solver, 'train_loader'):
 
@@ -171,7 +172,7 @@ def run_experiment(config):
             }
     else: 
 
-        accuracy, precision, recall, f_score, t_test = solver.test()
+        accuracy, precision, recall, f_score, t_test, pred_binary = solver.test()
 
         if hasattr(solver, 'train_loader'):
         # Collect results
@@ -193,6 +194,12 @@ def run_experiment(config):
             }
             
     # Save results
+    pred_df = pd.DataFrame(pred_binary, columns=solver.target_channels)
+    pred_df_path = os.path.join(config['output_dir'], 'predictions.csv')
+    pred_df.to_csv(pred_df_path, index=False)
+    
+    print(f"Predictions saved to: {pred_df_path}")
+    
     results_path = os.path.join(config['output_dir'], 'results.json')
     with open(results_path, 'w') as f:
         json.dump(results, f, indent=2)
@@ -345,17 +352,33 @@ if __name__ == "__main__":
     dataset_name="3_months"
 
     parser.add_argument('--dataset', type=str, default=f'{dataset_name}')
+    parser.add_argument('--mission', type=str, default=1)
+
 
     args = parser.parse_args()
+
+    if args.mission == 1: 
+
+        targets = [
+            "channel_41", "channel_42", "channel_43",
+            "channel_44", "channel_45", "channel_46"
+        ]
+
+    else:
+
+        targets = [
+            "channel_18", "channel_19", "channel_20",
+            "channel_21", "channel_22", "channel_23",
+            "channel_24", "channel_25", "channel_26",
+            "channel_27", "channel_28"
+        ]
 
     config = setup_esa_experiment(
         data_dir=DATA_DIR,
         dataset_name=args.dataset,
-        target_channels=[
-            "channel_41", "channel_42", "channel_43",
-            "channel_44", "channel_45", "channel_46"
-        ],
-        experiment_name=f"lftsad_{args.dataset}_6ch"
+        target_channels=targets,
+        experiment_name=f"lftsad_{args.dataset}_6ch",
+        mission = f"Mission{args.mission}"
     )
     
     results = run_experiment(config)

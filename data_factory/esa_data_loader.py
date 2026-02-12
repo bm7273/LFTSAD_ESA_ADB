@@ -7,6 +7,9 @@ import pandas as pd
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
+from sklearn.preprocessing import StandardScaler
+
+
 
 
 class ESADataset(Dataset):
@@ -37,6 +40,7 @@ class ESADataset(Dataset):
         self.win_size = win_size
         self.step = step
         self.mode = mode
+        self.scaler = StandardScaler()
         
         # Load data
         print(f"Loading ESA data from {csv_path}...")
@@ -59,7 +63,34 @@ class ESADataset(Dataset):
         print(f"Using channels: {len(self.target_channels)}")
         
         # Extract telemetry data
-        self.data = df[self.target_channels].values.astype(np.float32)
+        
+
+        if self.mode == 'train':
+
+            validation_date_split = self.timestamps.max() - pd.DateOffset(months=3)
+            self.validation_date_split = validation_date_split
+
+            train_df = df[self.timestamps <= validation_date_split]
+            val_df   = df[self.timestamps >  validation_date_split]
+
+            train_data = train_df[self.target_channels].values.astype(np.float32)
+
+            self.scaler.fit(train_data)
+
+            train_data = self.scaler.transform(train_data)
+            val_data   = self.scaler.transform(                
+                val_df[self.target_channels].values.astype(np.float32))
+
+            self.data = train_data
+            print("train:", self.data.shape)
+
+            self.val = val_data
+            print("val:", self.val.shape)
+
+        else:
+
+            self.data = df[self.target_channels].values.astype(np.float32)
+
         
         # Extract anomaly labels (per channel)
         self.label_columns = [f'is_anomaly_{ch}' for ch in self.target_channels]
@@ -124,7 +155,7 @@ def get_esa_loader(csv_path,
                    step=1,
                    target_channels=None,
                    mode='train',
-                   num_workers=0):
+                   num_workers=4):
     """
     Create DataLoader for ESA data
     
