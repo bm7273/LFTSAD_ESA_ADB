@@ -18,7 +18,7 @@ Place the ESA-MissionX and preprocessed folders obtained from running the ESA-AD
 There are six files/folders in the source
 - data_factory: The preprocessing folder/file. All datasets preprocessing codes are here.
 esa_data_loader.py loads data for the ESA experiments.
-- esa_main.py: The main python file. You can adjustment all parameters in there.
+- esa_main.py: The main python file. You can adjustment all parameters and file paths in there.
 - esa_metrics: Contains code to calculate the metrics for ESA-ADB
 - model: LFTSAD model folder
 - esa_solver_complete.py: Another python file. The training, validation, and testing processing are all in there
@@ -28,9 +28,9 @@ esa_data_loader.py loads data for the ESA experiments.
 2. Activate environment using conda activate LFTSAD
 3. Download the datasets and place such that dataset x_months.test and x_months.train for Mission Y as shown in the image<img width="441" height="514" alt="image" src="https://github.com/user-attachments/assets/77060afc-ac64-41e9-9de2-6aa489f21952" />
 
-4. To train and evaluate LFTSAD on a dataset, for example on 3 month data, run the following command:
+4. To train and evaluate LFTSAD on a dataset, for example on 3 month data for mission 1, run the following command:
 ```bash
-python esa_main.py --dataset 3_months
+python esa_main.py --dataset 3_months --mission 1
 ```
 
 ## BibTex Citation
